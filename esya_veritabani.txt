@@ -1,0 +1,8 @@
+Basit Yay;Silah Yuvasi;assets/items/3d16e8b0de87addb46599272f99e8d80.png;0;10;0;0
+Basit Yuzuk;Aksesuar Yuvasi;assets/items/one-ring.jpg;5;0;0;5
+Demir Kilic;Silah Yuvasi;assets/items/4155897.png;0;20;0;0
+Deri Cizme;Cizme Yuvasi;assets/items/cizme.png;0;0;2;0
+Yozlasmis Yurek;Gorev Esyasi;assets/items/yurek.png;0;0;0;0
+Kadim Orman Zirhi;Zirh Yuvasi;assets/items/kadim_zirh.png;50;0;25;0
+Golge Yuzugu;Aksesuar Yuvasi;assets/items/golge_yuzugu.png;0;10;0;20
+Efsanevi Yay;Silah Yuvasi;assets/items/efsanevi_yay.png;0;45;0;0

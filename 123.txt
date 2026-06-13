@@ -1,0 +1,65 @@
+3371.55 1775.83
+160 160 76.4941 80
+85 337.5 4 1750
+0 0 0 215
+2 1 1
+3 0 0
+Deri_Cizme 1
+Basit_Yuzuk 1
+Demir_Kilic 1
+Can_Potu 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+Golge_Yuzugu 1
+Efsanevi_Yay 1
+Kadim_Orman_Zirhi 1
+BOS 1
+Deri_Cizme 1
+Coklu_Atis
+Atilma
+Ekstra_Atis
+BOS
+BOS
+BOS
+BOS
+BOS
+2
+1 1 2 1
+2 1 1 1

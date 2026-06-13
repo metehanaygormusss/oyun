@@ -1,0 +1,59 @@
+1175.98 372.233
+100 100 50 50
+35 100 1 1250
+1 0 0
+Basit_Yay 1
+Basit_Yuzuk 1
+Demir_Kilic 1
+Can_Potu 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+BOS 1
+Golge_Yuzugu 1
+Efsanevi_Yay 1
+Kadim_Orman_Zirhi 1
+BOS 1
+Deri_Cizme 1
+Coklu_Atis
+Can_Potu
+BOS
+BOS
+BOS
+BOS
+0

@@ -2,8 +2,8 @@
 
 // Eski Düz Harita Sabitleri (Çarpışma ve Hitbox motoru burayı kullanmaya devam ediyor)
 inline constexpr float tileSize = 40.0f;
-inline constexpr int MAP_WIDTH = 160;
-inline constexpr int MAP_HEIGHT = 120;
+inline constexpr int MAP_WIDTH = 240;
+inline constexpr int MAP_HEIGHT = 180;
 
 // Yeni İzometrik (Görsel) Sabitler
 inline constexpr float tileW = 64.0f; 

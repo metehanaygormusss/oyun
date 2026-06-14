@@ -1,18 +1,19 @@
 #pragma once
 #include <SFML/Graphics.hpp>
 #include <cmath>
+#include <algorithm>
 #include "Harita.hpp"
 
 class Dusman {
 public:
-    int id;           // YENİ: Düşmanın benzersiz kimliği
-    int ureticiId;    // YENİ: Hangi inden çıktığını takip eder
+    int id;           
+    int ureticiId;    
 
     sf::Sprite sprite;
     float hareketHizi;
     bool yokEdilsinMi = false;
-    float genislik = 28.0f; 
-    float yukseklik = 28.0f;
+    float genislik; 
+    float yukseklik;
     float maxCan = 100.0f;
     float mevcutCan = 100.0f;
     float gorisMenzili = 240.0f; 
@@ -20,11 +21,34 @@ public:
     sf::RectangleShape canBarArka;
     sf::RectangleShape canBarOn;
 
-    Dusman(int _id, float x, float y, const sf::Texture& dusmanDokusu, int _ureticiId = -1) 
-        : id(_id), ureticiId(_ureticiId), sprite(dusmanDokusu) {
+    int tip = 0; // 0: Yakın dövüş, 1: Okçu, 2: Boss
+    float atesGecikmesi = 0.0f; 
+
+    Dusman(int _id, float x, float y, const sf::Texture& dusmanDokusu, int _ureticiId = -1, int _tip = 0) 
+        : id(_id), ureticiId(_ureticiId), sprite(dusmanDokusu), tip(_tip) {
         
         sprite.setPosition({x, y});
-        hareketHizi = 80.0f;
+        hareketHizi = (tip == 1) ? 50.0f : 80.0f; 
+        
+        sf::FloatRect bounds = sprite.getLocalBounds();
+        sprite.setOrigin({bounds.size.x / 2.0f, bounds.size.y * 0.85f});
+        
+        float hedefBoyut = (tip == 2) ? 80.0f : 40.0f; 
+        float maxBoyut = std::max(bounds.size.x, bounds.size.y);
+        
+        // SIFIRA BÖLME KORUMASI: Görsel yüklenemediyse (0 boyutluysa) çökmeyi engeller
+        if (maxBoyut > 0.0f) {
+            float olcek = hedefBoyut / maxBoyut;
+            sprite.setScale({olcek, olcek});
+        }
+        
+        genislik = hedefBoyut;
+        yukseklik = hedefBoyut;
+
+        if (tip == 2) { 
+            hareketHizi = 90.0f; 
+        }
+
         canBarArka.setSize({tileSize, 5.0f});
         canBarArka.setFillColor(sf::Color(50, 0, 0));
         canBarOn.setSize({tileSize, 5.0f});
@@ -41,19 +65,30 @@ public:
         if (mesafe <= gorisMenzili) aktifMi = true;
         else if (mesafe > gorisMenzili * 1.5f) aktifMi = false;
 
+        if (atesGecikmesi > 0.0f) atesGecikmesi -= deltaZaman;
+
         if (aktifMi && mesafe > 0.0f) {
             sf::Vector2f yon = hamYon / mesafe;
-            sf::Vector2f yeniPozisyon = mevcutPos + (yon * hareketHizi * deltaZaman);
+            
+            bool hareketEtsinMi = true;
+            if (tip == 1) {
+                if (mesafe < 120.0f) yon = -yon; 
+                else if (mesafe > 120.0f && mesafe < 200.0f) hareketEtsinMi = false; 
+            }
 
-            sprite.setPosition({yeniPozisyon.x, mevcutPos.y});
-            if (haritaCarpismaKontrolu(yeniPozisyon.x, mevcutPos.y, genislik, yukseklik)) sprite.setPosition({mevcutPos.x, mevcutPos.y});
+            if (hareketEtsinMi) {
+                sf::Vector2f yeniPozisyon = mevcutPos + (yon * hareketHizi * deltaZaman);
 
-            mevcutPos = sprite.getPosition();
-            sprite.setPosition({mevcutPos.x, yeniPozisyon.y});
-            if (haritaCarpismaKontrolu(mevcutPos.x, yeniPozisyon.y, genislik, yukseklik)) sprite.setPosition({mevcutPos.x, mevcutPos.y});
+                sprite.setPosition({yeniPozisyon.x, mevcutPos.y});
+                if (haritaCarpismaKontrolu(yeniPozisyon.x, mevcutPos.y, genislik, yukseklik)) sprite.setPosition({mevcutPos.x, mevcutPos.y});
 
-            if (yon.x > 0.0f) sprite.setScale({1.0f, 1.0f}); 
-            else if (yon.x < 0.0f) sprite.setScale({-1.0f, 1.0f}); 
+                mevcutPos = sprite.getPosition();
+                sprite.setPosition({mevcutPos.x, yeniPozisyon.y});
+                if (haritaCarpismaKontrolu(mevcutPos.x, yeniPozisyon.y, genislik, yukseklik)) sprite.setPosition({mevcutPos.x, mevcutPos.y});
+            }
+
+            if (hamYon.x > 0.0f) sprite.setScale({std::abs(sprite.getScale().x), sprite.getScale().y}); 
+            else if (hamYon.x < 0.0f) sprite.setScale({-std::abs(sprite.getScale().x), sprite.getScale().y}); 
         }
     }
 

@@ -39,7 +39,9 @@ struct YerdekiEsya {
     sf::Sprite sprite; Esya esya; sf::Vector2f gercekPos;
     YerdekiEsya(Esya e, float x, float y) : sprite(e.doku), esya(e), gercekPos(x, y) {
         sf::FloatRect bounds = sprite.getLocalBounds(); sprite.setOrigin({bounds.size.x / 2.0f, bounds.size.y / 2.0f});
-        float maxB = std::max(bounds.size.x, bounds.size.y); float olcek = (maxB > 0.0f) ? (30.0f / maxB) : 1.0f; 
+        float maxB = std::max(bounds.size.x, bounds.size.y); 
+        // SIFIRA BÖLME KORUMASI
+        float olcek = (maxB > 0.0f) ? (30.0f / maxB) : 1.0f; 
         sprite.setScale({olcek, olcek});
     }
 };
@@ -53,8 +55,12 @@ struct Binek {
         sf::FloatRect b = sprite.getLocalBounds();
         sprite.setOrigin({b.size.x / 2.0f, b.size.y * 0.85f});
         
-        float olcek = (40.0f * 1.5f) / std::max(b.size.x, b.size.y);
-        sprite.setScale({olcek, olcek});
+        float maxB = std::max(b.size.x, b.size.y);
+        // SIFIRA BÖLME KORUMASI
+        if (maxB > 0.0f) {
+            float olcek = (40.0f * 1.5f) / maxB;
+            sprite.setScale({olcek, olcek});
+        }
     }
 
     void takipEt(sf::Vector2f hedefPos, float deltaZaman) {
@@ -67,13 +73,13 @@ struct Binek {
             mevcutPos += yon * hareketHizi * deltaZaman;
             sprite.setPosition(mevcutPos);
             
-            if (yon.x > 0.05f) sprite.setScale({std::abs(sprite.getScale().x), sprite.getScale().y}); 
-            else if (yon.x < -0.05f) sprite.setScale({-std::abs(sprite.getScale().x), sprite.getScale().y});
+            float isoYonX = yon.x - yon.y; 
+            if (isoYonX > 0.05f) sprite.setScale({std::abs(sprite.getScale().x), sprite.getScale().y}); 
+            else if (isoYonX < -0.05f) sprite.setScale({-std::abs(sprite.getScale().x), sprite.getScale().y}); 
         }
     }
 };
 
-// YENİ: 7 Karelik Patlama Animasyonu Sistemi
 struct PatlamaEfekti {
     sf::Sprite sprite;
     float sayac = 0.0f;
@@ -82,21 +88,24 @@ struct PatlamaEfekti {
     
     PatlamaEfekti(sf::Vector2f pos, const sf::Texture& doku) : sprite(doku) {
         int kareGenisligi = static_cast<int>(doku.getSize().x) / 7;
+        if(kareGenisligi <= 0) kareGenisligi = 1; // SIFIRA BÖLME KORUMASI
+        
         sprite.setTextureRect(sf::IntRect({0, 0}, {kareGenisligi, static_cast<int>(doku.getSize().y)})); 
         sf::FloatRect b = sprite.getLocalBounds();
         sprite.setOrigin({b.size.x / 2.0f, b.size.y / 2.0f}); 
         sprite.setPosition(pos);
-        sprite.setScale({1.5f, 1.5f}); // Patlama görselini büyütüyoruz
+        sprite.setScale({1.5f, 1.5f}); 
     }
     
     void guncelle(float dt, const sf::Texture& doku) {
         sayac += dt;
-        if (sayac >= 0.04f) { // Patlama hızı (0.04 saniyede bir kare)
+        if (sayac >= 0.04f) { 
             sayac = 0.0f;
             kare++;
             if (kare >= 7) bitti = true;
             else {
                 int kareGenisligi = static_cast<int>(doku.getSize().x) / 7;
+                if(kareGenisligi <= 0) kareGenisligi = 1;
                 sprite.setTextureRect(sf::IntRect({kare * kareGenisligi, 0}, {kareGenisligi, static_cast<int>(doku.getSize().y)})); 
             }
         }

@@ -14,6 +14,7 @@
 #include "Harita.hpp"
 #include "ZeminDokusu.hpp"
 #include "Mermi.hpp"
+#include "Kilic.hpp" 
 #include "Dusman.hpp"
 #include "Oyuncu.hpp"
 #include "Arayuz.hpp"
@@ -51,27 +52,25 @@ int main() {
     sf::Texture atilmaDokusu, ekstraAtisDokusu;
     sf::Texture grassDoku[12];
     sf::Texture menuArkaDoku;
-    
+    sf::Texture patlamaDokusu, patlayanOkDokusu;
     sf::Texture altinDokusu, atDokusu, tabArkaDoku;
+    
+    sf::Texture okcuDusmanDokusu;
+    sf::Texture kumDokusu; 
+    sf::Texture slashDokusu; // YENİ: Kılıç Slash efekti dokusu
 
-    // 40 Karelik Su Animasyonu
     std::vector<sf::Texture> suDokulari(40);
     for (int i = 0; i < 40; ++i) {
         char buffer[64];
         snprintf(buffer, sizeof(buffer), "assets/water_128px_frames/%04d.png", i);
-        if (!suDokulari[i].loadFromFile(buffer)) {
-            std::cout << "Hata: " << buffer << " yuklenemedi!\n";
-        }
+        if (!suDokulari[i].loadFromFile(buffer)) {}
     }
 
-    // YENİ: 5 Karelik Ağaç Animasyonu Dokuları
     std::vector<sf::Texture> agacDokulari(5);
     for (int i = 0; i < 16; ++i) {
         char buffer[128];
         snprintf(buffer, sizeof(buffer), "assets/agac_sprite/Pine_01_Body_000_00%02d.png", i + 1);
-        if (!agacDokulari[i].loadFromFile(buffer)) {
-            std::cout << "Hata: " << buffer << " yuklenemedi!\n";
-        }
+        if (!agacDokulari[i].loadFromFile(buffer)) {}
     }
 
     if (!menuArkaDoku.loadFromFile("assets/menu_arkaplan.jpg")) std::cout << "Hata: assets/menu_arkaplan.jpg yuklenemedi!\n";
@@ -82,6 +81,12 @@ int main() {
     
     if (!altinDokusu.loadFromFile("assets/gold.png")) std::cout << "Hata: assets/gold.png yok!\n";
     if (!atDokusu.loadFromFile("assets/at.png")) std::cout << "Hata: assets/at.png yok!\n";
+
+    if (!patlayanOkDokusu.loadFromFile("assets/patlayanok.png")) std::cout << "Hata: assets/patlayanok.png yok!\n";
+    if (!patlamaDokusu.loadFromFile("assets/patlama_spritesheet.png")) std::cout << "Hata: assets/patlama_spritesheet.png yok!\n";
+    if (!okcuDusmanDokusu.loadFromFile("assets/okcudusman.png")) std::cout << "Hata: assets/okcudusman.png yok!\n";
+    if (!kumDokusu.loadFromFile("assets/kum.png")) std::cout << "Hata: assets/kum.png yok!\n";
+    if (!slashDokusu.loadFromFile("assets/pixel_art_sword_slash_sprites.png")) std::cout << "Hata: assets/pixel_art_sword_slash_sprites.png yok!\n";
 
     const char* grassDosyalar[12] = {
         "assets/grass_colorMap.png", "assets/grass1_colorMap.png", "assets/grass2_colorMap.png", "assets/grass3_colorMap.png",
@@ -108,7 +113,30 @@ int main() {
     attackSheet.yukle("assets/oyuncu_aminasyon/Hook Punch_8dir_sheet.png", ATTACK_KARE_SAYISI, ATTACK_KARE_SURESI);
     deathSheet.yukle("assets/oyuncu_aminasyon/Standing Death Backward 01_8dir_sheet.png", DEATH_KARE_SAYISI, DEATH_KARE_SURESI);
 
-    sf::Sprite cimenSprite(cimenDokusu), kopruSprite(kopruDokusu);
+    sf::Image fogImg;
+    fogImg.resize({2500, 2500}, sf::Color(8, 12, 16, 250)); 
+    for(unsigned int y = 0; y < 2500; y++) {
+        for(unsigned int x = 0; x < 2500; x++) {
+            float dx = static_cast<float>(x) - 1250.0f;
+            float dy = static_cast<float>(y) - 1250.0f;
+            float dist = std::sqrt(dx * dx + dy * dy);
+            float radius = 120.0f;   
+            float yumusama = 280.0f; 
+            
+            if(dist < radius) {
+                fogImg.setPixel({x, y}, sf::Color(8, 12, 16, 0));
+            } else if (dist < radius + yumusama) {
+                float oran = (dist - radius) / yumusama;
+                fogImg.setPixel({x, y}, sf::Color(8, 12, 16, static_cast<std::uint8_t>(250.0f * oran)));
+            }
+        }
+    }
+    sf::Texture fogTex;
+    (void)fogTex.loadFromImage(fogImg); 
+    sf::Sprite fogSprite(fogTex);
+    fogSprite.setOrigin({1250.0f, 1250.0f});
+
+    sf::Sprite cimenSprite(cimenDokusu), kopruSprite(kopruDokusu), kumSprite(kumDokusu); 
     
     sf::Sprite suSprite(suDokulari[0]);
     suSprite.setColor(sf::Color(255, 255, 255, 200)); 
@@ -119,20 +147,25 @@ int main() {
         sf::Sprite(grassDoku[8]),  sf::Sprite(grassDoku[9]), sf::Sprite(grassDoku[10]), sf::Sprite(grassDoku[11])
     };
 
-    Oyuncu oyuncu(120.0f, 120.0f); oyuncu.sheetleriAyarla(idleSheet, walkSheet, attackSheet, deathSheet);
+    Oyuncu oyuncu(120.0f, 120.0f, idleSheet.texture); 
+    oyuncu.sheetleriAyarla(idleSheet, walkSheet, attackSheet, deathSheet);
     
     Binek at(oyuncu.sprite.getPosition().x, oyuncu.sprite.getPosition().y, atDokusu);
 
     Arayuz ui; 
     ui.menuArkaPlan.setTexture(&tabArkaDoku);
     ui.menuArkaPlan.setFillColor(sf::Color(255, 255, 255, 255));
-    // ayarYukle() ile gelen tabX/Y/W/H değerlerini menuArkaPlan'a uygula
     ui.menuArkaPlan.setSize(sf::Vector2f({tabW, tabH}));
     ui.menuArkaPlan.setPosition({tabX, tabY});
 
     NPC dede(220.0f, 120.0f, dedeDokusu); GorevYoneticisi gorevYoneticisi; 
 
-    std::vector<Mermi> mermiler; std::vector<Dusman> dusmanlar; std::vector<HasarMetni> hasarMetinleri; 
+    std::vector<Mermi> mermiler; 
+    std::vector<Mermi> dusmanMermileri; 
+    std::vector<KilicSlasher> slashEfektleri; // YENİ: Kılıç kesme efektleri listesi
+    std::vector<PatlamaEfekti> patlamalar; 
+    std::vector<Dusman> dusmanlar; 
+    std::vector<HasarMetni> hasarMetinleri; 
     std::vector<YerdekiEsya> yerdekiEsyalar; std::vector<Bildirim> sistemMesajlari; std::vector<CanavarIni> inler;
 
     int nextDusmanId = 1, nextInId = 1, seciliDusmanId = -1;
@@ -142,8 +175,8 @@ int main() {
     inler[0].spawnSayaci = 10.0f;
     inler[1].spawnSayaci = 10.0f;
 
-    dusmanlar.emplace_back(nextDusmanId++, 600.0f, 300.0f, dusmanDokusu);
-    dusmanlar.emplace_back(nextDusmanId++, 1200.0f, 200.0f, dusmanDokusu);
+    dusmanlar.emplace_back(nextDusmanId++, 600.0f, 300.0f, okcuDusmanDokusu, -1, 1);
+    dusmanlar.emplace_back(nextDusmanId++, 1200.0f, 200.0f, dusmanDokusu, -1, 0);
 
     std::vector<sf::Sprite> statikDuvarDeposu, statikAgacDeposu; 
     for (int y = 0; y < MAP_HEIGHT; ++y) {
@@ -152,9 +185,14 @@ int main() {
                 sf::Sprite dSprite(duvarDokusu); dSprite.setScale({tileSize / duvarDokusu.getSize().x, tileSize / duvarDokusu.getSize().y});
                 dSprite.setPosition({x * tileSize, y * tileSize}); statikDuvarDeposu.push_back(dSprite);
             } else if (harita[y][x] == 2) {
-                // YENİ: Ağaçlar artık ilk kare ile oluşturuluyor
                 sf::Sprite aSprite(agacDokulari[0]); 
-                aSprite.setScale({tileSize / agacDokulari[0].getSize().x, tileSize / agacDokulari[0].getSize().y});
+                float tw = agacDokulari[0].getSize().x;
+                float th = agacDokulari[0].getSize().y;
+                if (tw > 0.0f && th > 0.0f) { 
+                    float agacScaleX = (tileSize * 2.8f) / tw;
+                    float agacScaleY = (tileSize * 2.8f) / th;
+                    aSprite.setScale({agacScaleX, agacScaleY});
+                }
                 aSprite.setPosition({x * tileSize, y * tileSize}); statikAgacDeposu.push_back(aSprite);
             }
         }
@@ -166,7 +204,7 @@ int main() {
         out << oyuncu.mevcutCan << " " << oyuncu.maxCan << " " << oyuncu.mevcutMana << " " << oyuncu.maxMana << "\n";
         out << oyuncu.exp << " " << oyuncu.maxExp << " " << oyuncu.seviye << " " << oyuncu.altin << "\n";
         out << oyuncu.statPuanlari << " " << oyuncu.statSaldiriGucu << " " << oyuncu.statZirh << " " << oyuncu.hareketHizi << "\n";
-        out << oyuncu.skillCokluAtisLvl << " " << oyuncu.skillAtilmaLvl << " " << oyuncu.skillEkstraLvl << "\n"; 
+        out << oyuncu.skillCokluAtisLvl << " " << oyuncu.skillAtilmaLvl << " " << oyuncu.skillEkstraLvl << " " << oyuncu.skillPatlamaLvl << "\n"; 
         out << dede.gorevAsamasi << " " << dede.durum << " " << dede.diyalogSayfasi << "\n";
         out << gununSaati << "\n"; 
         
@@ -187,7 +225,7 @@ int main() {
         float px, py; in >> px >> py; oyuncu.sprite.setPosition({px, py});
         in >> oyuncu.mevcutCan >> oyuncu.maxCan >> oyuncu.mevcutMana >> oyuncu.maxMana >> oyuncu.exp >> oyuncu.maxExp >> oyuncu.seviye >> oyuncu.altin;
         in >> oyuncu.statPuanlari >> oyuncu.statSaldiriGucu >> oyuncu.statZirh >> oyuncu.hareketHizi;
-        in >> oyuncu.skillCokluAtisLvl >> oyuncu.skillAtilmaLvl >> oyuncu.skillEkstraLvl; 
+        in >> oyuncu.skillCokluAtisLvl >> oyuncu.skillAtilmaLvl >> oyuncu.skillEkstraLvl >> oyuncu.skillPatlamaLvl; 
         in >> dede.gorevAsamasi >> dede.durum >> dede.diyalogSayfasi; dede.diyaloglariYukle();
         if(in >> gununSaati) {} else { gununSaati = 12; }
         
@@ -226,8 +264,20 @@ int main() {
     bool bossSpawlandi = false;
     const float ATES_HIZI = 0.4f; 
 
+    float fpsSayacSuresi = 0.0f;
+    int fpsGosterge = 0;
+    int anlikKareSayisi = 0;
+
     while (window.isOpen()) {
         float deltaZaman = clock.restart().asSeconds();
+        
+        anlikKareSayisi++;
+        fpsSayacSuresi += deltaZaman;
+        if(fpsSayacSuresi >= 1.0f) {
+            fpsGosterge = anlikKareSayisi;
+            anlikKareSayisi = 0;
+            fpsSayacSuresi = 0.0f;
+        }
         
         static float gercekZamanSayaci = 0.0f;
         gercekZamanSayaci += deltaZaman;
@@ -236,25 +286,27 @@ int main() {
             gununSaati = (gununSaati + 1) % 24;
         }
         
-        // 40 Karelik Su Animasyonu Motoru
         static float suAnimSayaci = 0.0f;
         static int suAnimKaresi = 0;
         suAnimSayaci += deltaZaman;
-        if (suAnimSayaci >= 0.03f) { 
-            suAnimSayaci -= 0.03f;
+        if (suAnimSayaci >= 0.08f) { 
+            suAnimSayaci -= 0.08f;
             suAnimKaresi = (suAnimKaresi + 1) % 40;
             suSprite.setTexture(suDokulari[suAnimKaresi], true);
         }
 
-        // YENİ: 5 Karelik Ağaç Animasyonu Motoru (Saniyede 5 kare hızında sallanır)
+        sf::Vector2f oyuncuMerkezCull = oyuncu.sprite.getPosition() + sf::Vector2f(oyuncu.genislik / 2.0f, oyuncu.yukseklik / 2.0f);
         static float agacAnimSayaci = 0.0f;
         static int agacAnimKaresi = 0;
         agacAnimSayaci += deltaZaman;
-        if (agacAnimSayaci >= 0.2f) { 
-            agacAnimSayaci -= 0.2f;
+        if (agacAnimSayaci >= 0.6f) { 
+            agacAnimSayaci -= 0.6f;
             agacAnimKaresi = (agacAnimKaresi + 1) % 5;
             for(auto& aSprite : statikAgacDeposu) {
-                aSprite.setTexture(agacDokulari[agacAnimKaresi], true);
+                if(std::abs(aSprite.getPosition().x - oyuncuMerkezCull.x) < 1500.0f && 
+                   std::abs(aSprite.getPosition().y - oyuncuMerkezCull.y) < 1500.0f) {
+                    aSprite.setTexture(agacDokulari[agacAnimKaresi], true);
+                }
             }
         }
         
@@ -387,13 +439,11 @@ int main() {
 
         if (ui.duzenlemeModu) {
             if (solTikBasildi) {
-                // Önce resize handle'ları kontrol et (slot)
                 for (int i = 0; i < 8; i++) {
                     if (ui.getSlotResizeHandleRect(i).contains(farePencerePosUI)) {
                         ui.suruklenenSlot = i; ui.suruklenenIslem = 1; break;
                     }
                 }
-                // Slot gövde taşıma
                 if (ui.suruklenenSlot == -1) {
                     for (int i = 0; i < 8; i++) {
                         if (ui.getAksiyonSlotRect(i).contains(farePencerePosUI)) {
@@ -401,21 +451,17 @@ int main() {
                         }
                     }
                 }
-                // Tab arka plan resize handle (suruklenenEleman = 3)
                 if (ui.suruklenenSlot == -1 && ui.suruklenenEleman == -1) {
                     if (ui.getTabResizeHandleRect().contains(farePencerePosUI)) {
                         ui.suruklenenEleman = 3;
                     }
                 }
-                // Tab arka plan gövde taşıma (suruklenenEleman = 4)
                 if (ui.suruklenenSlot == -1 && ui.suruklenenEleman == -1) {
                     if (ui.getTabRect().contains(farePencerePosUI)) {
                         ui.suruklenenEleman = 4;
-                        // Tıklanan noktanın sol üst köşeye göre offset'ini sakla
                         ui.suruklemeOffset = {farePencerePosUI.x - tabX, farePencerePosUI.y - tabY};
                     }
                 }
-                // Mini map taşıma (suruklenenEleman = 2)
                 sf::FloatRect mmRect({miniMapX - 90.0f, miniMapY - 90.0f}, {180.0f, 180.0f});
                 if (ui.suruklenenSlot == -1 && ui.suruklenenEleman == -1 && mmRect.contains(farePencerePosUI)) {
                     ui.suruklenenEleman = 2;
@@ -435,12 +481,10 @@ int main() {
                 } else if (ui.suruklenenEleman == 2) {
                     miniMapX = farePencerePosUI.x; miniMapY = farePencerePosUI.y;
                 } else if (ui.suruklenenEleman == 3) {
-                    // Tab arka plan boyutlandırma: minimum 100x60
                     tabW = std::max(100.0f, farePencerePosUI.x - tabX);
                     tabH = std::max(60.0f, farePencerePosUI.y - tabY);
                     ui.menuArkaPlan.setSize(sf::Vector2f({tabW, tabH}));
                 } else if (ui.suruklenenEleman == 4) {
-                    // Tab arka plan taşıma: tıklama offset'i ile tutarlı sürükleme
                     tabX = farePencerePosUI.x - ui.suruklemeOffset.x;
                     tabY = farePencerePosUI.y - ui.suruklemeOffset.y;
                     ui.menuArkaPlan.setPosition({tabX, tabY});
@@ -456,6 +500,7 @@ int main() {
                 if (yetSecim == 1) { oyuncu.skillCokluAtisLvl++; oyuncu.yetenekPuanlari--; }
                 else if (yetSecim == 2) { oyuncu.skillAtilmaLvl++; oyuncu.yetenekPuanlari--; }
                 else if (yetSecim == 3) { oyuncu.skillEkstraLvl++; oyuncu.yetenekPuanlari--; }
+                else if (yetSecim == 4) { oyuncu.skillPatlamaLvl++; oyuncu.yetenekPuanlari--; }
             }
 
             if (solTikBasildi && menuAcikMi && karakterSekmesi == 0 && oyuncu.statPuanlari > 0 && !yaziYaziliyorMu) {
@@ -591,21 +636,57 @@ int main() {
             oyuncu.degerleriYenile(deltaZaman); 
             at.takipEt(oyuncuMerkez, deltaZaman); 
 
+            auto patlamaYarat = [&](sf::Vector2f merkezPos) {
+                patlamalar.push_back(PatlamaEfekti(merkezPos, patlamaDokusu));
+                float alanHasari = 100.0f + (oyuncu.skillPatlamaLvl * 50.0f);
+                
+                for (size_t dIdx = 0; dIdx < dusmanlar.size(); dIdx++) {
+                    sf::Vector2f aoeMerkez = dusmanlar[dIdx].sprite.getPosition() + sf::Vector2f(dusmanlar[dIdx].genislik/2.0f, dusmanlar[dIdx].yukseklik/2.0f);
+                    float farkX = merkezPos.x - aoeMerkez.x;
+                    float farkY = merkezPos.y - aoeMerkez.y;
+                    if (std::sqrt(farkX*farkX + farkY*farkY) < 150.0f) {
+                        dusmanlar[dIdx].mevcutCan -= alanHasari;
+                        dusmanlar[dIdx].aktifMi = true;
+                        sf::Vector2f dIso = izoYap(aoeMerkez.x, aoeMerkez.y);
+                        hasarMetinleri.emplace_back(font, alanHasari, sf::Vector2f(dIso.x, dIso.y - 60.0f), sf::Color(255, 100, 0));
+                    }
+                }
+                for (size_t inIdx = 0; inIdx < inler.size(); inIdx++) {
+                    if (inler[inIdx].yokEdilsinMi) continue;
+                    sf::Vector2f aoeMerkez = inler[inIdx].sprite.getPosition() + sf::Vector2f(inler[inIdx].genislik/2.0f, inler[inIdx].yukseklik/2.0f);
+                    float farkX = merkezPos.x - aoeMerkez.x;
+                    float farkY = merkezPos.y - aoeMerkez.y;
+                    if (std::sqrt(farkX*farkX + farkY*farkY) < 150.0f) {
+                        inler[inIdx].mevcutCan -= alanHasari;
+                        sf::Vector2f inIso = izoYap(aoeMerkez.x, aoeMerkez.y);
+                        hasarMetinleri.emplace_back(font, alanHasari, sf::Vector2f(inIso.x, inIso.y - 60.0f), sf::Color(255, 100, 0));
+                    }
+                }
+            };
+
             if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space) && hoverDusmanId == -1 && !yaziYaziliyorMu) {
                 if (atesGecikmesi <= 0.0f && oyuncu.ekipmanlar[2].doluMu) {
                     oyuncu.atesEtmeTetikle(); 
                     
-                    if (oyuncu.ekstraSuresi > 0.0f) {
-                        sf::Vector2f fark = fareDunyaCart - oyuncuMerkez;
-                        float angle = std::atan2(fark.y, fark.x);
-                        float a1 = angle - 0.15f; 
-                        float a2 = angle + 0.15f; 
-                        sf::Vector2f h1 = oyuncuMerkez + sf::Vector2f(std::cos(a1), std::sin(a1)) * 100.0f;
-                        sf::Vector2f h2 = oyuncuMerkez + sf::Vector2f(std::cos(a2), std::sin(a2)) * 100.0f;
-                        mermiler.push_back(Mermi(oyuncuMerkez, h1, mermiDokusu));
-                        mermiler.push_back(Mermi(oyuncuMerkez, h2, mermiDokusu));
+                    // YAY KONTROLÜ
+                    bool yayMi = (oyuncu.ekipmanlar[2].isim.find("Yay") != std::string::npos || oyuncu.ekipmanlar[2].isim.find("yay") != std::string::npos);
+
+                    if (yayMi) {
+                        if (oyuncu.ekstraSuresi > 0.0f) {
+                            sf::Vector2f fark = fareDunyaCart - oyuncuMerkez;
+                            float angle = std::atan2(fark.y, fark.x);
+                            float a1 = angle - 0.15f; 
+                            float a2 = angle + 0.15f; 
+                            sf::Vector2f h1 = oyuncuMerkez + sf::Vector2f(std::cos(a1), std::sin(a1)) * 100.0f;
+                            sf::Vector2f h2 = oyuncuMerkez + sf::Vector2f(std::cos(a2), std::sin(a2)) * 100.0f;
+                            mermiler.push_back(Mermi(oyuncuMerkez, h1, mermiDokusu));
+                            mermiler.push_back(Mermi(oyuncuMerkez, h2, mermiDokusu));
+                        } else {
+                            mermiler.push_back(Mermi(oyuncuMerkez, fareDunyaCart, mermiDokusu));
+                        }
                     } else {
-                        mermiler.push_back(Mermi(oyuncuMerkez, fareDunyaCart, mermiDokusu));
+                        // KILIÇ KONTROLÜ
+                        slashEfektleri.push_back(KilicSlasher(oyuncuMerkez, fareDunyaCart, slashDokusu));
                     }
                     atesGecikmesi = ATES_HIZI;
                 }
@@ -642,6 +723,36 @@ int main() {
                         oyuncu.mevcutMana -= 30.0f;
                         hasarMetinleri.emplace_back(font, "EKSTRA ATIS AKTIF!", sf::Vector2f(oyuncuIsoPos.x, oyuncuIsoPos.y - 80.0f), sf::Color::Cyan);
                     }
+                    else if (oyuncu.hizliErisim[k] == "Patlayan Ok" && oyuncu.patlamaBekleme <= 0.0f && oyuncu.mevcutMana >= 40.0f && oyuncu.skillPatlamaLvl > 0) {
+                        oyuncu.mevcutMana -= 40.0f;
+                        oyuncu.patlamaBekleme = std::max(8.0f, 20.0f - oyuncu.skillPatlamaLvl * 2.0f);
+                        oyuncu.atesEtmeTetikle();
+                        
+                        bool yayMi = (oyuncu.ekipmanlar[2].isim.find("Yay") != std::string::npos || oyuncu.ekipmanlar[2].isim.find("yay") != std::string::npos);
+
+                        if (yayMi) {
+                            if (oyuncu.ekstraSuresi > 0.0f) {
+                                sf::Vector2f fark = fareDunyaCart - oyuncuMerkez;
+                                float angle = std::atan2(fark.y, fark.x);
+                                sf::Vector2f h1 = oyuncuMerkez + sf::Vector2f(std::cos(angle - 0.15f), std::sin(angle - 0.15f)) * 100.0f;
+                                sf::Vector2f h2 = oyuncuMerkez + sf::Vector2f(std::cos(angle + 0.15f), std::sin(angle + 0.15f)) * 100.0f;
+                                
+                                Mermi m1(oyuncuMerkez, h1, mermiDokusu, true); m1.sprite.setColor(sf::Color(255, 50, 50));
+                                Mermi m2(oyuncuMerkez, h2, mermiDokusu, true); m2.sprite.setColor(sf::Color(255, 50, 50));
+                                mermiler.push_back(m1); mermiler.push_back(m2);
+                            } else {
+                                Mermi m1(oyuncuMerkez, fareDunyaCart, mermiDokusu, true); m1.sprite.setColor(sf::Color(255, 50, 50));
+                                mermiler.push_back(m1);
+                            }
+                            hasarMetinleri.emplace_back(font, "PATLAYAN OK!", sf::Vector2f(oyuncuIsoPos.x, oyuncuIsoPos.y - 80.0f), sf::Color(255, 100, 0));
+                        } else {
+                            KilicSlasher ks(oyuncuMerkez, fareDunyaCart, slashDokusu);
+                            ks.patlayanMi = true; // Kılıç ile de patlayan atak vuracak!
+                            ks.sprite.setColor(sf::Color(255, 100, 100)); // Rengini kırmızı yap
+                            slashEfektleri.push_back(ks);
+                            hasarMetinleri.emplace_back(font, "PATLAYAN DARBE!", sf::Vector2f(oyuncuIsoPos.x, oyuncuIsoPos.y - 80.0f), sf::Color(255, 100, 0));
+                        }
+                    }
                     else if (oyuncu.hizliErisim[k] == "Can Potu") {
                         for (int e = 0; e < 42; e++) {
                             if (oyuncu.envanter[e].doluMu && oyuncu.envanter[e].isim == "Can Potu") {
@@ -667,15 +778,20 @@ int main() {
                 skillOkGecikmesi -= deltaZaman;
                 if (skillOkGecikmesi <= 0.0f) {
                     oyuncu.atesEtmeTetikle(); 
-                    if (oyuncu.ekstraSuresi > 0.0f) {
-                        sf::Vector2f fark = fareDunyaCart - oyuncuMerkez;
-                        float angle = std::atan2(fark.y, fark.x);
-                        sf::Vector2f h1 = oyuncuMerkez + sf::Vector2f(std::cos(angle - 0.15f), std::sin(angle - 0.15f)) * 100.0f;
-                        sf::Vector2f h2 = oyuncuMerkez + sf::Vector2f(std::cos(angle + 0.15f), std::sin(angle + 0.15f)) * 100.0f;
-                        mermiler.push_back(Mermi(oyuncuMerkez, h1, mermiDokusu));
-                        mermiler.push_back(Mermi(oyuncuMerkez, h2, mermiDokusu));
+                    bool yayMi = (oyuncu.ekipmanlar[2].isim.find("Yay") != std::string::npos || oyuncu.ekipmanlar[2].isim.find("yay") != std::string::npos);
+                    if (yayMi) {
+                        if (oyuncu.ekstraSuresi > 0.0f) {
+                            sf::Vector2f fark = fareDunyaCart - oyuncuMerkez;
+                            float angle = std::atan2(fark.y, fark.x);
+                            sf::Vector2f h1 = oyuncuMerkez + sf::Vector2f(std::cos(angle - 0.15f), std::sin(angle - 0.15f)) * 100.0f;
+                            sf::Vector2f h2 = oyuncuMerkez + sf::Vector2f(std::cos(angle + 0.15f), std::sin(angle + 0.15f)) * 100.0f;
+                            mermiler.push_back(Mermi(oyuncuMerkez, h1, mermiDokusu));
+                            mermiler.push_back(Mermi(oyuncuMerkez, h2, mermiDokusu));
+                        } else {
+                            mermiler.push_back(Mermi(oyuncuMerkez, fareDunyaCart, mermiDokusu));
+                        }
                     } else {
-                        mermiler.push_back(Mermi(oyuncuMerkez, fareDunyaCart, mermiDokusu));
+                        slashEfektleri.push_back(KilicSlasher(oyuncuMerkez, fareDunyaCart, slashDokusu));
                     }
                     skillKalanOk--; skillOkGecikmesi = 0.15f; 
                 }
@@ -683,6 +799,52 @@ int main() {
 
             for (auto& dusman : dusmanlar) {
                 dusman.takipEt(oyuncuMerkez, deltaZaman);
+                
+                if (dusman.aktifMi && dusman.tip == 1 && dusman.atesGecikmesi <= 0.0f) {
+                    sf::Vector2f dMerkez = dusman.sprite.getPosition() + sf::Vector2f(dusman.genislik / 2.0f, dusman.yukseklik / 2.0f);
+                    
+                    sf::Vector2f fark = oyuncuMerkez - dMerkez;
+                    float mesafe = std::sqrt(fark.x * fark.x + fark.y * fark.y);
+                    
+                    if (mesafe > 0.0f && mesafe < dusman.gorisMenzili) {
+                        Mermi yeniOk(dMerkez, oyuncuMerkez, mermiDokusu);
+                        yeniOk.hiz = 400.0f; 
+                        yeniOk.sprite.setColor(sf::Color(180, 50, 50)); 
+                        dusmanMermileri.push_back(yeniOk);
+                        
+                        dusman.atesGecikmesi = 1.5f; 
+                    }
+                }
+            }
+            
+            for (size_t i = 0; i < dusmanMermileri.size(); i++) {
+                dusmanMermileri[i].guncelle(deltaZaman); 
+                sf::Vector2f mPos = dusmanMermileri[i].sprite.getPosition();
+                
+                int mGridX = static_cast<int>(mPos.x / tileSize), mGridY = static_cast<int>(mPos.y / tileSize);
+                if (mGridX >= 0 && mGridX < MAP_WIDTH && mGridY >= 0 && mGridY < MAP_HEIGHT) {
+                    int tile = harita[mGridY][mGridX]; 
+                    if (tile == 1 || tile == 2) dusmanMermileri[i].yokEdilsinMi = true; 
+                } else {
+                    dusmanMermileri[i].yokEdilsinMi = true;
+                }
+
+                if (dusmanMermileri[i].yokEdilsinMi) { dusmanMermileri.erase(dusmanMermileri.begin() + i); i--; continue; }
+
+                sf::Vector2f fark = mPos - oyuncuMerkez;
+                float mesafe = std::sqrt(fark.x * fark.x + fark.y * fark.y);
+                if (mesafe < 20.0f) { 
+                    dusmanMermileri[i].yokEdilsinMi = true; 
+                    
+                    float hamHasar = 25.0f; 
+                    float netHasar = std::max(1.0f, hamHasar - (toplamZirh * 0.15f)); 
+                    oyuncu.mevcutCan -= netHasar; 
+                    
+                    sf::Vector2f oIso = izoYap(oyuncuMerkez.x, oyuncuMerkez.y);
+                    hasarMetinleri.emplace_back(font, netHasar, sf::Vector2f(oIso.x, oIso.y - 80.0f), sf::Color(255, 50, 50));
+                }
+
+                if (dusmanMermileri[i].yokEdilsinMi) { dusmanMermileri.erase(dusmanMermileri.begin() + i); i--; }
             }
 
             if (dede.gorevAsamasi == 2 && dede.durum == 1) {
@@ -706,7 +868,7 @@ int main() {
                 }
             }
             if (dede.gorevAsamasi == 5 && dede.durum == 1 && !bossSpawlandi) {
-                Dusman boss(nextDusmanId++, 1200.0f, 1200.0f, dusmanDokusu); 
+                Dusman boss(nextDusmanId++, 1200.0f, 1200.0f, dusmanDokusu, -1, 2); 
                 boss.mevcutCan = 1000.0f; boss.maxCan = 1000.0f; boss.genislik = 80.0f; boss.yukseklik = 80.0f;
                 boss.sprite.setScale({2.5f, 2.5f}); boss.sprite.setColor(sf::Color(120, 30, 180));
                 dusmanlar.push_back(boss); bossSpawlandi = true;
@@ -719,7 +881,11 @@ int main() {
                     in.spawnSayaci += deltaZaman;
                     if (in.spawnSayaci >= 10.0f) {
                         in.spawnSayaci = 0.0f; in.aktifDusmanSayisi++;
-                        dusmanlar.emplace_back(nextDusmanId++, in.x + 20.0f, in.y + 20.0f, dusmanDokusu, in.id);
+                        
+                        int secilenTip = (std::rand() % 100 < 50) ? 0 : 1;
+                        const sf::Texture& secilenDoku = (secilenTip == 1) ? okcuDusmanDokusu : dusmanDokusu;
+                        
+                        dusmanlar.emplace_back(nextDusmanId++, in.x + 20.0f, in.y + 20.0f, secilenDoku, in.id, secilenTip);
                     }
                 }
             }
@@ -749,31 +915,101 @@ int main() {
                 mermiler[i].guncelle(deltaZaman); sf::Vector2f mPos = mermiler[i].sprite.getPosition();
                 int mGridX = static_cast<int>(mPos.x / tileSize), mGridY = static_cast<int>(mPos.y / tileSize);
                 if (mGridX >= 0 && mGridX < MAP_WIDTH && mGridY >= 0 && mGridY < MAP_HEIGHT) {
-                    int tile = harita[mGridY][mGridX]; if (tile == 1 || tile == 2) mermiler[i].yokEdilsinMi = true;
+                    int tile = harita[mGridY][mGridX]; 
+                    if (tile == 1 || tile == 2) {
+                        mermiler[i].yokEdilsinMi = true;
+                        if (mermiler[i].patlayanMi) patlamaYarat(mPos);
+                    }
                 } else mermiler[i].yokEdilsinMi = true;
 
+                if (mermiler[i].yokEdilsinMi) { mermiler.erase(mermiler.begin() + i); i--; continue; }
+
+                bool carpistiMi = false;
                 for (size_t j = 0; j < dusmanlar.size(); j++) {
                     sf::Vector2f dMerkez = dusmanlar[j].sprite.getPosition() + sf::Vector2f(dusmanlar[j].genislik / 2.0f, dusmanlar[j].yukseklik / 2.0f);
                     sf::Vector2f fark = mPos - dMerkez; float mesafe = std::sqrt(fark.x * fark.x + fark.y * fark.y);
                     if (mesafe < ((dusmanlar[j].genislik > 50.0f) ? 40.0f : 20.0f)) { 
-                        mermiler[i].yokEdilsinMi = true; float gercekHasar = static_cast<float>(toplamSaldiri + (oyuncu.skillCokluAtisLvl * 5)); 
-                        dusmanlar[j].mevcutCan -= gercekHasar; dusmanlar[j].aktifMi = true;
-                        sf::Vector2f dMerkezIso = izoYap(dMerkez.x, dMerkez.y);
-                        hasarMetinleri.emplace_back(font, gercekHasar, sf::Vector2f(dMerkezIso.x, dMerkezIso.y - 60.0f), sf::Color(255, 215, 0));
+                        carpistiMi = true;
+                        if (mermiler[i].patlayanMi) {
+                            patlamaYarat(mPos); 
+                        } else {
+                            float gercekHasar = static_cast<float>(toplamSaldiri + (oyuncu.skillCokluAtisLvl * 5)); 
+                            dusmanlar[j].mevcutCan -= gercekHasar; dusmanlar[j].aktifMi = true;
+                            sf::Vector2f dMerkezIso = izoYap(dMerkez.x, dMerkez.y);
+                            hasarMetinleri.emplace_back(font, gercekHasar, sf::Vector2f(dMerkezIso.x, dMerkezIso.y - 60.0f), sf::Color(255, 215, 0));
+                        }
+                        break;
                     }
                 }
 
-                for (size_t j = 0; j < inler.size(); j++) {
-                    if (inler[j].yokEdilsinMi) continue;
-                    sf::Vector2f inMerkez = inler[j].sprite.getPosition() + sf::Vector2f(inler[j].genislik / 2.0f, inler[j].yukseklik / 2.0f);
-                    sf::Vector2f fark = mPos - inMerkez;
-                    if (std::sqrt(fark.x * fark.x + fark.y * fark.y) < 40.0f) { 
-                        mermiler[i].yokEdilsinMi = true; inler[j].mevcutCan -= static_cast<float>(toplamSaldiri);
-                        sf::Vector2f inMerkezIso = izoYap(inMerkez.x, inMerkez.y);
-                        hasarMetinleri.emplace_back(font, toplamSaldiri, sf::Vector2f(inMerkezIso.x, inMerkezIso.y - 60.0f), sf::Color(255, 100, 100));
+                if (!carpistiMi) {
+                    for (size_t j = 0; j < inler.size(); j++) {
+                        if (inler[j].yokEdilsinMi) continue;
+                        sf::Vector2f inMerkez = inler[j].sprite.getPosition() + sf::Vector2f(inler[j].genislik / 2.0f, inler[j].yukseklik / 2.0f);
+                        sf::Vector2f fark = mPos - inMerkez;
+                        if (std::sqrt(fark.x * fark.x + fark.y * fark.y) < 40.0f) { 
+                            carpistiMi = true;
+                            if (mermiler[i].patlayanMi) {
+                                patlamaYarat(mPos); 
+                            } else {
+                                inler[j].mevcutCan -= static_cast<float>(toplamSaldiri);
+                                sf::Vector2f inMerkezIso = izoYap(inMerkez.x, inMerkez.y);
+                                hasarMetinleri.emplace_back(font, toplamSaldiri, sf::Vector2f(inMerkezIso.x, inMerkezIso.y - 60.0f), sf::Color(255, 100, 100));
+                            }
+                            break;
+                        }
                     }
                 }
+
+                if (carpistiMi) mermiler[i].yokEdilsinMi = true;
                 if (mermiler[i].yokEdilsinMi) { mermiler.erase(mermiler.begin() + i); i--; }
+            }
+
+            // YENİ: KILIÇ SLASH ÇARPIŞMALARI VE HASAR HESAPLAMASI
+            for (size_t i = 0; i < slashEfektleri.size(); i++) {
+                slashEfektleri[i].guncelle(deltaZaman, slashDokusu);
+                
+                if (!slashEfektleri[i].hasarVerildi) {
+                    float gercekHasar = static_cast<float>(toplamSaldiri + (oyuncu.skillCokluAtisLvl * 5)); 
+                    
+                    if (slashEfektleri[i].patlayanMi) {
+                        patlamaYarat(slashEfektleri[i].sprite.getPosition());
+                    }
+
+                    for (size_t j = 0; j < dusmanlar.size(); j++) {
+                        sf::Vector2f dMerkez = dusmanlar[j].sprite.getPosition() + sf::Vector2f(dusmanlar[j].genislik / 2.0f, dusmanlar[j].yukseklik / 2.0f);
+                        sf::Vector2f fark = slashEfektleri[i].sprite.getPosition() - dMerkez; 
+                        float mesafe = std::sqrt(fark.x * fark.x + fark.y * fark.y);
+                        
+                        if (mesafe < ((dusmanlar[j].genislik > 50.0f) ? 80.0f : 60.0f)) { 
+                            dusmanlar[j].mevcutCan -= gercekHasar; 
+                            dusmanlar[j].aktifMi = true;
+                            sf::Vector2f dMerkezIso = izoYap(dMerkez.x, dMerkez.y);
+                            hasarMetinleri.emplace_back(font, gercekHasar, sf::Vector2f(dMerkezIso.x, dMerkezIso.y - 60.0f), sf::Color(255, 215, 0));
+                        }
+                    }
+                    for (size_t j = 0; j < inler.size(); j++) {
+                        if (inler[j].yokEdilsinMi) continue;
+                        sf::Vector2f inMerkez = inler[j].sprite.getPosition() + sf::Vector2f(inler[j].genislik / 2.0f, inler[j].yukseklik / 2.0f);
+                        sf::Vector2f fark = slashEfektleri[i].sprite.getPosition() - inMerkez;
+                        if (std::sqrt(fark.x * fark.x + fark.y * fark.y) < 60.0f) { 
+                            inler[j].mevcutCan -= gercekHasar;
+                            sf::Vector2f inMerkezIso = izoYap(inMerkez.x, inMerkez.y);
+                            hasarMetinleri.emplace_back(font, gercekHasar, sf::Vector2f(inMerkezIso.x, inMerkezIso.y - 60.0f), sf::Color(255, 100, 100));
+                        }
+                    }
+                    slashEfektleri[i].hasarVerildi = true;
+                }
+
+                if (slashEfektleri[i].bitti) { 
+                    slashEfektleri.erase(slashEfektleri.begin() + i); 
+                    i--; 
+                }
+            }
+            
+            for (size_t i = 0; i < patlamalar.size(); i++) {
+                patlamalar[i].guncelle(deltaZaman, patlamaDokusu);
+                if (patlamalar[i].bitti) { patlamalar.erase(patlamalar.begin() + i); i--; }
             }
         }
 
@@ -790,7 +1026,7 @@ int main() {
                 sf::Vector2f gercekPos = dusmanlar[j].sprite.getPosition();
                 sf::Vector2f isoPos = izoYap(gercekPos.x + dusmanlar[j].genislik / 2.0f, gercekPos.y + dusmanlar[j].yukseklik / 2.0f);
                 
-                bool bossMuydu = (dusmanlar[j].genislik > 50.0f);
+                bool bossMuydu = (dusmanlar[j].tip == 2);
                 float kazanilanExp = bossMuydu ? 500.0f : 35.0f;
                 hasarMetinleri.emplace_back(font, "+" + std::to_string((int)kazanilanExp) + " EXP", sf::Vector2f(isoPos.x, isoPos.y - 40.0f), sf::Color(255, 215, 0));
                 oyuncu.expKazan(kazanilanExp); 
@@ -827,14 +1063,25 @@ int main() {
 
         oyunKamerasi.setCenter(oyuncuIsoPos); window.clear(sf::Color::Black); window.setView(oyunKamerasi);
 
-        for (int y = 0; y < MAP_HEIGHT; ++y) {
-            for (int x = 0; x < MAP_WIDTH; ++x) {
+        int pGridX = static_cast<int>(oyuncuMerkez.x / tileSize);
+        int pGridY = static_cast<int>(oyuncuMerkez.y / tileSize);
+        int gorusMesafesi = 35; 
+        
+        int basY = std::max(0, pGridY - gorusMesafesi);
+        int bitY = std::min(MAP_HEIGHT - 1, pGridY + gorusMesafesi);
+        int basX = std::max(0, pGridX - gorusMesafesi);
+        int bitX = std::min(MAP_WIDTH - 1, pGridX + gorusMesafesi);
+
+        for (int y = basY; y <= bitY; ++y) {
+            for (int x = basX; x <= bitX; ++x) {
                 sf::Vector2f isoPos = izoYap(x * tileSize, y * tileSize); int tile = harita[y][x];
                 sf::Sprite* aktifSprite = nullptr;
                 if (tile == 3) {
                     aktifSprite = &suSprite;
                 } else if (tile == 4) {
                     aktifSprite = &kopruSprite;
+                } else if (tile == 8) { 
+                    aktifSprite = &kumSprite;
                 } else {
                     uint8_t dokuIdx = zemindokusu[y][x];
                     aktifSprite = &grassSprite[dokuIdx];
@@ -844,9 +1091,12 @@ int main() {
                     sf::FloatRect bounds = aktifSprite->getLocalBounds();
                     float w = bounds.size.x; 
                     float h = bounds.size.y;
-                    sf::Transform t; t.translate({isoPos.x, isoPos.y + (tileSize / 2.0f)}); t.scale({1.0f, 0.5f}); t.rotate(sf::degrees(45.0f)); 
-                    float olcek = (tileSize * 1.41421356f) / w; t.scale({olcek, olcek}); t.translate({-w / 2.0f, -h / 2.0f}); 
-                    sf::RenderStates states; states.transform = t; window.draw(*aktifSprite, states);
+                    
+                    if (w > 0.0f && h > 0.0f) { 
+                        sf::Transform t; t.translate({isoPos.x, isoPos.y + (tileSize / 2.0f)}); t.scale({1.0f, 0.5f}); t.rotate(sf::degrees(45.0f)); 
+                        float olcek = (tileSize * 1.41421356f) / w; t.scale({olcek, olcek}); t.translate({-w / 2.0f, -h / 2.0f}); 
+                        sf::RenderStates states; states.transform = t; window.draw(*aktifSprite, states);
+                    }
                 }
             }
         }
@@ -863,9 +1113,18 @@ int main() {
         renderListesi.push_back({&at.sprite, at.sprite.getPosition().x + at.sprite.getPosition().y, false, 40.0f, 40.0f}); 
         renderListesi.push_back({&dede.sprite, dede.sprite.getPosition().x + dede.sprite.getPosition().y, false, tileSize, tileSize});
         for (auto& dusman : dusmanlar) renderListesi.push_back({&dusman.sprite, dusman.sprite.getPosition().x + dusman.sprite.getPosition().y, false, dusman.genislik, dusman.yukseklik});
-        for (auto& dSprite : statikDuvarDeposu) renderListesi.push_back({&dSprite, dSprite.getPosition().x + dSprite.getPosition().y, true, tileSize, tileSize});
-        for (auto& aSprite : statikAgacDeposu) renderListesi.push_back({&aSprite, aSprite.getPosition().x + aSprite.getPosition().y, false, tileSize, tileSize});
         for (auto& in : inler) if(!in.yokEdilsinMi) renderListesi.push_back({&in.sprite, in.x + in.y, false, in.genislik, in.yukseklik});
+
+        for (auto& dSprite : statikDuvarDeposu) {
+            if(std::abs(dSprite.getPosition().x - oyuncuMerkez.x) < 1500.0f && std::abs(dSprite.getPosition().y - oyuncuMerkez.y) < 1500.0f) {
+                renderListesi.push_back({&dSprite, dSprite.getPosition().x + dSprite.getPosition().y, true, tileSize, tileSize});
+            }
+        }
+        for (auto& aSprite : statikAgacDeposu) {
+            if(std::abs(aSprite.getPosition().x - oyuncuMerkez.x) < 1500.0f && std::abs(aSprite.getPosition().y - oyuncuMerkez.y) < 1500.0f) {
+                renderListesi.push_back({&aSprite, aSprite.getPosition().x + aSprite.getPosition().y, false, tileSize, tileSize});
+            }
+        }
 
         std::sort(renderListesi.begin(), renderListesi.end(), [](const CizilebilirVarlik& a, const CizilebilirVarlik& b) { return a.zIndeks < b.zIndeks; });
 
@@ -886,6 +1145,28 @@ int main() {
             sf::Vector2f merkezIso = izoYap(cMermi.getPosition().x, cMermi.getPosition().y); cMermi.setPosition({merkezIso.x, merkezIso.y - 25.0f}); window.draw(cMermi);
         }
 
+        for (auto& mermi : dusmanMermileri) {
+            sf::Sprite cMermi = mermi.sprite; sf::FloatRect bounds = cMermi.getLocalBounds(); cMermi.setOrigin({bounds.size.x / 2.0f, bounds.size.y / 2.0f});
+            sf::Vector2f merkezIso = izoYap(cMermi.getPosition().x, cMermi.getPosition().y); cMermi.setPosition({merkezIso.x, merkezIso.y - 25.0f}); window.draw(cMermi);
+        }
+        
+        // YENİ: Kılıç kesme animasyonlarının çizimi
+        for (auto& slash : slashEfektleri) {
+            sf::Sprite cSlash = slash.sprite; 
+            sf::Vector2f merkezIso = izoYap(cSlash.getPosition().x, cSlash.getPosition().y); 
+            cSlash.setPosition({merkezIso.x, merkezIso.y - 10.0f}); 
+            window.draw(cSlash);
+        }
+
+        for (auto& patlama : patlamalar) {
+            sf::Vector2f gercekPos = patlama.sprite.getPosition();
+            sf::Vector2f merkezIso = izoYap(gercekPos.x, gercekPos.y);
+            
+            sf::Sprite geciciSprite = patlama.sprite;
+            geciciSprite.setPosition({merkezIso.x, merkezIso.y - 20.0f}); 
+            window.draw(geciciSprite);
+        }
+
         for (auto& dusman : dusmanlar) {
             if (dusman.id == seciliDusmanId) {
                 sf::Vector2f gercekPos = dusman.sprite.getPosition(); sf::Vector2f merkezIso = izoYap(gercekPos.x + dusman.genislik / 2.0f, gercekPos.y + dusman.yukseklik / 2.0f);
@@ -898,7 +1179,11 @@ int main() {
         if (hoverDusmanId != -1) {
             for (const auto& d : dusmanlar) {
                 if (d.id == hoverDusmanId) {
-                    sf::Text dusmanIsim(font); dusmanIsim.setString("Orman Canavari");
+                    sf::Text dusmanIsim(font); 
+                    if (d.tip == 1) dusmanIsim.setString("Okcu Canavari");
+                    else if (d.tip == 2) dusmanIsim.setString("Sisin Efendisi");
+                    else dusmanIsim.setString("Orman Canavari");
+                    
                     dusmanIsim.setCharacterSize(16); dusmanIsim.setFillColor(sf::Color::Red);
                     dusmanIsim.setOutlineColor(sf::Color::Black); dusmanIsim.setOutlineThickness(2.0f);
                     sf::Vector2f dMerkez = d.sprite.getPosition() + sf::Vector2f(d.genislik / 2.0f, d.yukseklik / 2.0f);
@@ -920,6 +1205,9 @@ int main() {
             npcIsim.setPosition({isoPos.x + 12.0f, isoPos.y - 20.0f}); window.draw(npcIsim);
         }
 
+        fogSprite.setPosition(oyuncuIsoPos);
+        window.draw(fogSprite);
+
         window.setView(window.getDefaultView());
         
         int alpha = 0;
@@ -937,15 +1225,34 @@ int main() {
 
         ui.cizSabitHUD(window, uiDokusu, font, oyuncu);
         
+        if (!ui.duzenlemeModu && !menuAcikMi && !envanterAcikMi && !ayarlarAcikMi && !haritaAcikMi) {
+            char debugBilgi[128];
+            snprintf(debugBilgi, sizeof(debugBilgi), "FPS: %d\nHarita: %dx%d\nKoor: X:%d Y:%d", 
+                     fpsGosterge, MAP_WIDTH, MAP_HEIGHT, 
+                     static_cast<int>(oyuncuMerkez.x / tileSize), 
+                     static_cast<int>(oyuncuMerkez.y / tileSize));
+            
+            sf::Text txtDebug(font);
+            txtDebug.setString(debugBilgi);
+            txtDebug.setCharacterSize(16);
+            txtDebug.setFillColor(sf::Color(200, 255, 200));
+            txtDebug.setOutlineColor(sf::Color::Black);
+            txtDebug.setOutlineThickness(2.0f);
+            
+            sf::FloatRect textBounds = txtDebug.getLocalBounds();
+            txtDebug.setPosition({1580.0f - textBounds.size.x, 20.0f});
+            window.draw(txtDebug);
+        }
+        
         if (!haritaAcikMi && !ayarlarAcikMi) {
             ui.cizMiniMap(window, oyuncuMerkez, dusmanlar, inler, dede.sprite.getPosition());
-            ui.cizAksiyonBari(window, font, oyuncu, mermiDokusu, atilmaDokusu, ekstraAtisDokusu, farePencerePosUI);
+            ui.cizAksiyonBari(window, font, oyuncu, mermiDokusu, atilmaDokusu, ekstraAtisDokusu, patlayanOkDokusu, farePencerePosUI);
         }
         
         if (ui.duzenlemeModu) {
             ui.cizDuzenlemeModu(window, font);
         }
-        else if (menuAcikMi) ui.cizKarakterEkrani(window, font, oyuncu, idleSheet.texture, karakterSekmesi, solTikBasildi, solTikBirakildi, farePencerePosUI, mermiDokusu, atilmaDokusu, ekstraAtisDokusu);
+        else if (menuAcikMi) ui.cizKarakterEkrani(window, font, oyuncu, idleSheet.texture, karakterSekmesi, solTikBasildi, solTikBirakildi, farePencerePosUI, mermiDokusu, atilmaDokusu, ekstraAtisDokusu, patlayanOkDokusu);
         else if (envanterAcikMi) ui.cizEnvanterEkrani(window, font, oyuncu, idleSheet.texture, farePencerePosUI, solTikBasildi, solTikBirakildi, sagTikBasildi);
         else if (gorevAcikMi) ui.cizGorevEkrani(window, font, gorevYoneticisi);
         else if (haritaAcikMi) ui.cizHaritaEkrani(window, font, oyuncu.sprite.getPosition());

@@ -118,6 +118,8 @@ public:
         if (sf::FloatRect({900.0f, 295.0f}, {20.0f, 20.0f}).contains(farePos)) return 1;
         if (sf::FloatRect({900.0f, 365.0f}, {20.0f, 20.0f}).contains(farePos)) return 2;
         if (sf::FloatRect({900.0f, 435.0f}, {20.0f, 20.0f}).contains(farePos)) return 3;
+        // YENİ: Patlayan ok geliştirme butonu tık kontrolü eklendi
+        if (sf::FloatRect({900.0f, 505.0f}, {20.0f, 20.0f}).contains(farePos)) return 4;
         return 0;
     }
 
@@ -153,10 +155,7 @@ public:
         bg.setScale({1600.0f / size.x, 900.0f / size.y});
         window.draw(bg);
 
-        sf::RectangleShape menüPaneli({350.0f, 400.0f});
-        menüPaneli.setFillColor(sf::Color(0, 0, 0, 150)); 
-        menüPaneli.setPosition({625.0f, 320.0f});
-        window.draw(menüPaneli);
+        // Şeffaf menü arka plan kutusu KILDIRILDI
 
         auto metinYaz = [&](const std::string& metin, float x, float y, int boyut, sf::Color renk) {
             sf::Text t(font); t.setString(metin); t.setCharacterSize(boyut);
@@ -225,7 +224,7 @@ public:
             if(sf::FloatRect({bX, bY+165.0f}, {300.0f, 40.0f}).contains(farePos)) return 7; 
             if(sf::FloatRect({bX, bY+220.0f}, {300.0f, 40.0f}).contains(farePos)) return 3; 
             if(sf::FloatRect({bX, bY+275.0f}, {300.0f, 40.0f}).contains(farePos)) return 4; 
-            if(sf::FloatRect({bX, bY+330.0f}, {300.0f, 40.0f}).contains(farePos)) return 8; // Saat Değiştir
+            if(sf::FloatRect({bX, bY+330.0f}, {300.0f, 40.0f}).contains(farePos)) return 8; 
             if(sf::FloatRect({bX, bY+385.0f}, {300.0f, 40.0f}).contains(farePos)) return 5; 
         } else if (altMenu == 1) { 
             auto liste = kayitlariListele();
@@ -276,7 +275,6 @@ public:
             window.draw(handle);
         }
 
-        // Tab Arka Plan (tab_background.png) Pin Göstergesi
         {
             sf::FloatRect tabRect = getTabRect();
             sf::FloatRect tabHandle = getTabResizeHandleRect();
@@ -350,7 +348,7 @@ public:
         levelText.setCharacterSize(16); levelText.setFillColor(sf::Color(255, 215, 0)); levelText.setPosition({75.0f, 126.0f}); window.draw(levelText);
     }
 
-    void cizAksiyonBari(sf::RenderWindow& window, sf::Font& font, Oyuncu& oyuncu, const sf::Texture& cokluDoku, const sf::Texture& atilmaDoku, const sf::Texture& ekstraDoku, sf::Vector2f farePos) {
+    void cizAksiyonBari(sf::RenderWindow& window, sf::Font& font, Oyuncu& oyuncu, const sf::Texture& cokluDoku, const sf::Texture& atilmaDoku, const sf::Texture& ekstraDoku, const sf::Texture& patlamaOkDoku, sf::Vector2f farePos) {
         
         std::string hoverBaslik = "";
         std::string hoverDetay = "";
@@ -382,6 +380,7 @@ public:
             if (oyuncu.hizliErisim[i] == "Coklu Atis") { beklemeSuresi = oyuncu.cokluAtisBekleme; ikonDoku = &cokluDoku; }
             else if (oyuncu.hizliErisim[i] == "Atilma") { beklemeSuresi = oyuncu.atilmaBekleme; ikonDoku = &atilmaDoku; }
             else if (oyuncu.hizliErisim[i] == "Ekstra Atis") { beklemeSuresi = oyuncu.ekstraBekleme; ikonDoku = &ekstraDoku; }
+            else if (oyuncu.hizliErisim[i] == "Patlayan Ok") { beklemeSuresi = oyuncu.patlamaBekleme; ikonDoku = &patlamaOkDoku; }
 
             if (ikonDoku) {
                 sf::Sprite ikon(*ikonDoku);
@@ -423,6 +422,8 @@ public:
                     hoverBaslik = "Atilma"; hoverDetay = "Seviye: " + std::to_string(oyuncu.skillAtilmaLvl) + "\nBekleme: " + std::to_string((int)std::max(2.0f, 8.0f - oyuncu.skillAtilmaLvl * 1.0f)) + "sn\nMana Bedeli: 15\nEtki: Fare yonune pruzsuzce kayar.";
                 } else if (oyuncu.hizliErisim[i] == "Ekstra Atis") {
                     hoverBaslik = "Ekstra Atis"; hoverDetay = "Seviye: " + std::to_string(oyuncu.skillEkstraLvl) + "\nBekleme: " + std::to_string((int)std::max(10.0f, 30.0f - oyuncu.skillEkstraLvl * 2.0f)) + "sn\nMana Bedeli: 30\nEtki: " + std::to_string((int)(10.0f + oyuncu.skillEkstraLvl * 2.0f)) + "sn boyunca cift ok atar.";
+                } else if (oyuncu.hizliErisim[i] == "Patlayan Ok") {
+                    hoverBaslik = "Patlayan Ok"; hoverDetay = "Seviye: " + std::to_string(oyuncu.skillPatlamaLvl) + "\nBekleme: " + std::to_string((int)std::max(8.0f, 20.0f - oyuncu.skillPatlamaLvl * 2.0f)) + "sn\nMana Bedeli: 40\nEtki: Genis alana yuksek hasar verir.";
                 } else if (oyuncu.hizliErisim[i] == "Can Potu") {
                     hoverBaslik = "Can Potu"; hoverDetay = "Etki: Aninda 50 Can yeniler.\n(Istemedigin skilleri Sag Tik ile silebilirsin)";
                 }
@@ -434,7 +435,6 @@ public:
         }
     }
 
-    // ÇÖZÜM: SFML 3 Uyumlu Mini Harita (Triangles ve Süslü Parantez Vertex ile)
     void cizMiniMap(sf::RenderWindow& window, sf::Vector2f oyuncuPos, std::vector<Dusman>& dusmanlar, std::vector<CanavarIni>& inler, sf::Vector2f dedePos) {
         float mmX = miniMapX; 
         float mmY = miniMapY;
@@ -449,7 +449,6 @@ public:
         arkaPlan.setOutlineThickness(3.0f);
         window.draw(arkaPlan);
 
-        // ÇÖZÜM: sf::Quads yerine sf::PrimitiveType::Triangles kullanıldı
         sf::VertexArray minimapTiles(sf::PrimitiveType::Triangles);
         float tileMmSize = tileSize * dunyaOlcek; 
 
@@ -472,6 +471,7 @@ public:
                 else if (tileTip == 2) tileRenk = sf::Color(0, 80, 0, 200);   
                 else if (tileTip == 3) tileRenk = sf::Color(30, 100, 200, 200); 
                 else if (tileTip == 4) tileRenk = sf::Color(139, 69, 19, 200); 
+                else if (tileTip == 8) tileRenk = sf::Color(244, 164, 96, 200); 
                 else continue;
 
                 float gercekX = x * tileSize;
@@ -490,7 +490,6 @@ public:
                     sf::Vector2f p3{cX + tileMmSize, cY + tileMmSize};
                     sf::Vector2f p4{cX, cY + tileMmSize};
 
-                    // ÇÖZÜM: sf::Vertex() yerine sf::Vertex{} C++17 Brace Initialization
                     minimapTiles.append(sf::Vertex{p1, tileRenk});
                     minimapTiles.append(sf::Vertex{p2, tileRenk});
                     minimapTiles.append(sf::Vertex{p3, tileRenk});
@@ -576,6 +575,7 @@ public:
                 else if (t == 2) tileShape.setFillColor(sf::Color(20, 100, 20)); 
                 else if (t == 3) tileShape.setFillColor(sf::Color(30, 100, 200)); 
                 else if (t == 4) tileShape.setFillColor(sf::Color(139, 69, 19)); 
+                else if (t == 8) tileShape.setFillColor(sf::Color(244, 164, 96)); 
 
                 window.draw(tileShape);
             }
@@ -596,7 +596,8 @@ public:
         window.draw(pMarker);
     }
 
-    void cizKarakterEkrani(sf::RenderWindow& window, sf::Font& font, Oyuncu& oyuncu, const sf::Texture& durDoku, int& karakterSekmesi, bool solTikBasildi, bool solTikBirakildi, sf::Vector2f farePos, const sf::Texture& cokluDoku, const sf::Texture& atilmaDoku, const sf::Texture& ekstraDoku) {
+    // YENİ: patlamaOkDoku parametresi buraya tekrar eklendi.
+    void cizKarakterEkrani(sf::RenderWindow& window, sf::Font& font, Oyuncu& oyuncu, const sf::Texture& durDoku, int& karakterSekmesi, bool solTikBasildi, bool solTikBirakildi, sf::Vector2f farePos, const sf::Texture& cokluDoku, const sf::Texture& atilmaDoku, const sf::Texture& ekstraDoku, const sf::Texture& patlamaOkDoku) {
         
         if (solTikBirakildi && surukleniyorMu && kaynakTip == 3) {
             for(int i=0; i<8; i++) {
@@ -709,11 +710,16 @@ public:
             cizSkill(570.0f, 290.0f, "Coklu Atis", cokluDoku, oyuncu.skillCokluAtisLvl, "Seviye: " + std::to_string(oyuncu.skillCokluAtisLvl) + "\nBekleme: " + std::to_string((int)std::max(5.0f, 15.0f - oyuncu.skillCokluAtisLvl * 1.5f)) + "sn\nHasar Bonusu: +" + std::to_string(oyuncu.skillCokluAtisLvl * 5) + "\nMana Bedeli: 25\n\nPasif olarak seri atis yapar.");
             cizSkill(570.0f, 360.0f, "Atilma", atilmaDoku, oyuncu.skillAtilmaLvl, "Seviye: " + std::to_string(oyuncu.skillAtilmaLvl) + "\nBekleme: " + std::to_string((int)std::max(2.0f, 8.0f - oyuncu.skillAtilmaLvl * 1.0f)) + "sn\nMana Bedeli: 15\n\nFare yonune pruzsuzce kayar.");
             cizSkill(570.0f, 430.0f, "Ekstra Atis", ekstraDoku, oyuncu.skillEkstraLvl, "Seviye: " + std::to_string(oyuncu.skillEkstraLvl) + "\nBekleme: " + std::to_string((int)std::max(10.0f, 30.0f - oyuncu.skillEkstraLvl * 2.0f)) + "sn\nSure: " + std::to_string((int)(10.0f + oyuncu.skillEkstraLvl * 2.0f)) + "sn\nMana Bedeli: 30\n\nBelirli sure cift ok atar.");
+            
+            // YENİ: Patlayan Ok arayüz çizimi
+            cizSkill(570.0f, 500.0f, "Patlayan Ok", patlamaOkDoku, oyuncu.skillPatlamaLvl, "Seviye: " + std::to_string(oyuncu.skillPatlamaLvl) + "\nBekleme: " + std::to_string((int)std::max(8.0f, 20.0f - oyuncu.skillPatlamaLvl * 2.0f)) + "sn\nMana Bedeli: 40\n\nDusmanlara carptiginda alan hasari vurur.");
 
             if (oyuncu.yetenekPuanlari > 0) {
                 cizArtiBtn(900.0f, 295.0f, "Coklu Atis Gelistirmesi", "Sonraki Seviye:\nHasar: +5\nBekleme Suresi: -1.5sn");
                 cizArtiBtn(900.0f, 365.0f, "Atilma Gelistirmesi", "Sonraki Seviye:\nKayma Mesafesi Artar\nBekleme Suresi: -1.0sn");
                 cizArtiBtn(900.0f, 435.0f, "Ekstra Atis Gelistirmesi", "Sonraki Seviye:\nEtki Suresi: +2.0sn\nBekleme Suresi: -2.0sn");
+                // YENİ: Patlayan Ok "+" artırma butonu çizimi
+                cizArtiBtn(900.0f, 505.0f, "Patlayan Ok Gelistirmesi", "Sonraki Seviye:\nAlan Hasari: +50\nBekleme Suresi: -2.0sn");
             }
 
             if (hoverBaslik != "" && !surukleniyorMu) {

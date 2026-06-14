@@ -8,9 +8,10 @@ public:
     sf::Vector2f yon;
     float hiz = 600.0f;
     bool yokEdilsinMi = false;
+    bool patlayanMi = false; // YENİ EKLENDİ
 
-    // HATA ÇÖZÜMÜ: : sprite(doku) başlatma listesi eklendi
-    Mermi(sf::Vector2f baslangic, sf::Vector2f hedef, const sf::Texture& doku) : sprite(doku) {
+    // HATA ÇÖZÜMÜ: : sprite(doku) başlatma listesi eklendi ve _patlayanMi parametresi koyuldu
+    Mermi(sf::Vector2f baslangic, sf::Vector2f hedef, const sf::Texture& doku, bool _patlayanMi = false) : sprite(doku), patlayanMi(_patlayanMi) {
         sprite.setPosition(baslangic);
 
         // 1. Kartezyen Yön Hesaplama

@@ -107,13 +107,13 @@ public:
     int skillCokluAtisLvl = 1;
     int skillAtilmaLvl = 0;
     int skillEkstraLvl = 0;
-    int skillPatlamaLvl = 0; // YENİ: Patlayan Ok Yetenek Seviyesi
+    int skillPatlamaLvl = 0; 
 
     float cokluAtisBekleme = 0.0f;
     float atilmaBekleme = 0.0f;
     float ekstraBekleme = 0.0f;
     float ekstraSuresi = 0.0f;
-    float patlamaBekleme = 0.0f; // YENİ: Patlayan Ok Bekleme Süresi
+    float patlamaBekleme = 0.0f; 
     
     float atilmaKalanSure = 0.0f;
     sf::Vector2f atilmaYonu = {0.0f, 0.0f};
@@ -217,7 +217,7 @@ public:
         if (atilmaBekleme > 0.0f) atilmaBekleme -= deltaZaman;
         if (ekstraBekleme > 0.0f) ekstraBekleme -= deltaZaman;
         if (ekstraSuresi > 0.0f) ekstraSuresi -= deltaZaman;
-        if (patlamaBekleme > 0.0f) patlamaBekleme -= deltaZaman; // YENİ
+        if (patlamaBekleme > 0.0f) patlamaBekleme -= deltaZaman; 
     }
 
     void sheetleriAyarla(const AnimasyonSheet& _idle, const AnimasyonSheet& _walk, const AnimasyonSheet& _attack, const AnimasyonSheet& _death) {
@@ -292,14 +292,14 @@ public:
                 animZaman = 0.0f;
             }
 
-            if (klavyeGiris.x == 0 && klavyeGiris.y < 0)      mevcutYon = K;
-            else if (klavyeGiris.x == 0 && klavyeGiris.y > 0) mevcutYon = G;
-            else if (klavyeGiris.x > 0 && klavyeGiris.y == 0) mevcutYon = D;
-            else if (klavyeGiris.x < 0 && klavyeGiris.y == 0) mevcutYon = B;
-            else if (klavyeGiris.x > 0 && klavyeGiris.y > 0)  mevcutYon = KD;
-            else if (klavyeGiris.x > 0 && klavyeGiris.y < 0)  mevcutYon = GD;
-            else if (klavyeGiris.x < 0 && klavyeGiris.y > 0)  mevcutYon = KB;
-            else if (klavyeGiris.x < 0 && klavyeGiris.y < 0)  mevcutYon = GB;
+            if (klavyeGiris.x == 0 && klavyeGiris.y < 0)      mevcutYon = K;   
+            else if (klavyeGiris.x > 0 && klavyeGiris.y < 0)  mevcutYon = KB;  
+            else if (klavyeGiris.x > 0 && klavyeGiris.y == 0) mevcutYon = B;   
+            else if (klavyeGiris.x > 0 && klavyeGiris.y > 0)  mevcutYon = GB;  
+            else if (klavyeGiris.x == 0 && klavyeGiris.y > 0) mevcutYon = G;   
+            else if (klavyeGiris.x < 0 && klavyeGiris.y > 0)  mevcutYon = GD;  
+            else if (klavyeGiris.x < 0 && klavyeGiris.y == 0) mevcutYon = D;   
+            else if (klavyeGiris.x < 0 && klavyeGiris.y < 0)  mevcutYon = KD;  
 
             hareket.x = klavyeGiris.y + klavyeGiris.x;
             hareket.y = klavyeGiris.y - klavyeGiris.x;
@@ -310,8 +310,20 @@ public:
         }
 
         if (mevcutDurum == WALK) {
+            float aktifHareketHizi = hareketHizi;
+            
+            // YENİ: Kum üzerinde %20 yavaşlama kontrolü
+            int gridX = static_cast<int>((sprite.getPosition().x + genislik / 2.0f) / tileSize);
+            int gridY = static_cast<int>((sprite.getPosition().y + yukseklik / 2.0f) / tileSize);
+            
+            if (gridX >= 0 && gridX < MAP_WIDTH && gridY >= 0 && gridY < MAP_HEIGHT) {
+                if (harita[gridY][gridX] == 8) {
+                    aktifHareketHizi *= 0.80f; // Hızı %20 düşür
+                }
+            }
+
             sf::Vector2f mevcutPozisyon = sprite.getPosition();
-            sf::Vector2f yeniPozisyon   = mevcutPozisyon + (hareket * hareketHizi * deltaZaman);
+            sf::Vector2f yeniPozisyon   = mevcutPozisyon + (hareket * aktifHareketHizi * deltaZaman);
 
             sprite.setPosition({yeniPozisyon.x, mevcutPozisyon.y});
             if (haritaCarpismaKontrolu(yeniPozisyon.x, mevcutPozisyon.y, genislik, yukseklik)) sprite.setPosition({mevcutPozisyon.x, mevcutPozisyon.y});
